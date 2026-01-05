@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CY HACKXIVIST | DoS & DDoS Masterclass</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --brand-primary: #3b82f6; /* Blue */
+            --brand-secondary: #a855f7; /* Purple */
+            --brand-accent: #06b6d4; /* Cyan */
+            --bg-dark: #0f172a; /* Slate 900 */
+            --glass: rgba(30, 41, 59, 0.85); /* Slate 800 with high opacity */
+        }
+        
+        body {
+            background-color: var(--bg-dark);
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* --- FONTS --- */
+        .title-font { font-family: 'Orbitron', sans-serif; }
+
+        /* --- ANIMATED BACKGROUND --- */
+        #networkCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+        }
+
+        /* --- SLIDE TRANSITIONS --- */
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform: scale(0.95) translateY(20px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: scale(1) translateY(0);
+            z-index: 10;
+        }
+
+        /* --- GLASS CARDS --- */
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 16px;
+        }
+
+        /* --- NAVIGATION --- */
+        .nav-controls {
+            position: fixed;
+            bottom: 30px;
+            right: 40px;
+            z-index: 50;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: white;
+            color: var(--bg-dark);
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+        .nav-btn:hover {
+            transform: scale(1.1);
+            background: var(--brand-accent);
+            color: white;
+        }
+
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--brand-primary), var(--brand-secondary));
+            z-index: 60;
+            transition: width 0.5s;
+        }
+
+        /* --- SPECIFIC ANIMATIONS --- */
+        .logo-float { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
+
+        /* Shop Analogy Animation */
+        .customer { position: absolute; font-size: 1.5rem; color: #f87171; opacity: 0; }
+        .customer-1 { animation: rush 3s infinite; animation-delay: 0s; top: 40%; }
+        .customer-2 { animation: rush 3s infinite; animation-delay: 0.2s; top: 50%; }
+        .customer-3 { animation: rush 3s infinite; animation-delay: 0.4s; top: 60%; }
+        
+        @keyframes rush {
+            0% { left: 10%; opacity: 0; }
+            20% { opacity: 1; }
+            80% { left: 60%; opacity: 1; }
+            100% { left: 70%; opacity: 0; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- BACKGROUND -->
+    <canvas id="networkCanvas"></canvas>
+    <div class="progress-bar" id="progress"></div>
+
+    <!-- LOGO (Top Left Persistent) -->
+    <div class="fixed top-6 left-8 z-50 flex items-center gap-3">
+        <svg width="40" height="40" viewBox="0 0 100 100" fill="none" stroke="#3b82f6" stroke-width="4">
+            <path d="M50 5 L95 30 L95 70 L50 95 L5 70 L5 30 Z" fill="rgba(59, 130, 246, 0.2)"/>
+            <path d="M50 25 L75 38 L75 62 L50 75 L25 62 L25 38 Z" fill="#3b82f6"/>
+        </svg>
+        <span class="title-font font-bold text-xl tracking-widest text-white">CY HACKXIVIST</span>
+    </div>
+
+    <!-- SLIDES CONTAINER -->
+    <div id="deck-container">
+
+        <!-- SLIDE 1: INTRO -->
+        <div class="slide active">
+            <div class="text-center z-10 logo-float">
+                <div class="mb-6 mx-auto w-32 h-32 relative">
+                    <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" stroke="url(#grad1)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <defs>
+                            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M50 5 L95 30 L95 70 L50 95 L5 70 L5 30 Z" fill="rgba(59, 130, 246, 0.1)" />
+                        <path d="M50 20 L80 35 L80 65 L50 80 L20 65 L20 35 Z" />
+                        <circle cx="50" cy="50" r="8" fill="#a855f7" />
+                        <line x1="50" y1="50" x2="95" y2="30" />
+                        <line x1="50" y1="50" x2="5" y2="70" />
+                        <line x1="50" y1="50" x2="50" y2="5" />
+                    </svg>
+                </div>
+                <h1 class="text-6xl md:text-7xl font-black text-white mb-4 title-font leading-tight">
+                    DoS & <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">DDoS</span>
+                </h1>
+                <p class="text-xl text-gray-300 font-light max-w-2xl mx-auto tracking-wide">
+                    DENIAL OF SERVICE ATTACKS & DEFENSE
+                </p>
+                <div class="mt-8 px-6 py-2 border border-blue-500/50 rounded-full inline-block text-blue-400 text-sm tracking-widest">
+                    SESSION BY CY HACKXIVIST
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: INTRODUCTION -->
+        <div class="slide">
+            <h2 class="text-4xl title-font text-white mb-8 border-b-2 border-blue-500 pb-2">01. INTRODUCTION</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-6xl w-full">
+                <div class="space-y-6">
+                    <div class="glass-panel p-6 border-l-4 border-blue-500">
+                        <h3 class="text-xl font-bold text-blue-400">DoS (Denial of Service)</h3>
+                        <p class="text-gray-300 text-sm mt-2">Single attacker floods server with requests.</p>
+                    </div>
+                    <div class="glass-panel p-6 border-l-4 border-purple-500">
+                        <h3 class="text-xl font-bold text-purple-400">DDoS (Distributed DoS)</h3>
+                        <p class="text-gray-300 text-sm mt-2">Multiple attackers/botnets flood server simultaneously.</p>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h4 class="text-white font-bold mb-2"><i class="fas fa-chart-line text-red-400 mr-2"></i>Business Impact</h4>
+                        <ul class="list-disc list-inside text-gray-400 text-sm">
+                            <li>Operational Downtime</li>
+                            <li>Financial Loss</li>
+                            <li>Reputation Damage</li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- Analogy Animation -->
+                <div class="glass-panel p-6 relative overflow-hidden flex flex-col items-center justify-center bg-slate-900/50">
+                    <div class="absolute top-4 left-4 text-xs font-bold text-gray-500 tracking-widest">ANALOGY: THE SHOP</div>
+                    <div class="w-full h-40 relative mt-8">
+                        <div class="absolute right-10 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                            <i class="fas fa-store text-5xl text-gray-400"></i>
+                            <span class="text-xs mt-2 bg-red-600 px-2 py-1 rounded text-white">BLOCKED</span>
+                        </div>
+                        <!-- Animated Crowd -->
+                        <i class="fas fa-user customer customer-1"></i>
+                        <i class="fas fa-user customer customer-2"></i>
+                        <i class="fas fa-user customer customer-3"></i>
+                    </div>
+                    <p class="text-center text-sm text-gray-300 italic px-8">
+                        "One person blocking the entrance (DoS) vs. Thousands rushing in (DDoS)."
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: NETWORKING BASICS -->
+        <div class="slide">
+            <h2 class="text-4xl title-font text-white mb-10">02. NETWORKING BASICS</h2>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 max-w-7xl w-full">
+                <!-- IP -->
+                <div class="glass-panel p-6 text-center hover:bg-blue-900/20 transition">
+                    <i class="fas fa-fingerprint text-3xl text-blue-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-2">IP Address</h3>
+                    <p class="text-xs text-gray-400">Digital address of a device (like a home address).</p>
+                </div>
+                <!-- Server -->
+                <div class="glass-panel p-6 text-center hover:bg-purple-900/20 transition">
+                    <i class="fas fa-server text-3xl text-purple-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-2">Server</h3>
+                    <p class="text-xs text-gray-400">System providing services/resources to others.</p>
+                </div>
+                <!-- Bandwidth -->
+                <div class="glass-panel p-6 text-center hover:bg-cyan-900/20 transition">
+                    <i class="fas fa-road text-3xl text-cyan-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-2">Bandwidth</h3>
+                    <p class="text-xs text-gray-400">Network capacity. Think: Width of the road.</p>
+                </div>
+                <!-- Packets -->
+                <div class="glass-panel p-6 text-center hover:bg-green-900/20 transition">
+                    <i class="fas fa-box text-3xl text-green-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-2">Packets</h3>
+                    <p class="text-xs text-gray-400">Small data units transmitted over network.</p>
+                </div>
+                <!-- Model -->
+                <div class="glass-panel p-6 text-center hover:bg-orange-900/20 transition">
+                    <i class="fas fa-network-wired text-3xl text-orange-400 mb-4"></i>
+                    <h3 class="font-bold text-white mb-2">Client-Server</h3>
+                    <p class="text-xs text-gray-400">Relationship between users (Client) and providers (Server).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: ATTACKER WORKFLOW -->
+        <div class="slide">
+            <h2 class="text-4xl title-font text-white mb-12">03. ATTACKER'S WORKFLOW</h2>
+            <div class="relative max-w-6xl w-full">
+                <!-- Line -->
+                <div class="absolute top-1/2 left-0 w-full h-1 bg-gray-700 -z-10 -translate-y-1/2 hidden md:block"></div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <!-- 1 -->
+                    <div class="glass-panel p-6 text-center bg-slate-900/80">
+                        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold mx-auto mb-4">1</div>
+                        <h3 class="text-blue-400 font-bold mb-2">Recon</h3>
+                        <p class="text-xs text-gray-400">Collect target info (IP, Ports, OS).</p>
+                    </div>
+                    <!-- 2 -->
+                    <div class="glass-panel p-6 text-center bg-slate-900/80">
+                        <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold mx-auto mb-4">2</div>
+                        <h3 class="text-purple-400 font-bold mb-2">Track Removal</h3>
+                        <p class="text-xs text-gray-400">Hide identity (VPN, Proxy, Botnets).</p>
+                    </div>
+                    <!-- 3 -->
+                    <div class="glass-panel p-6 text-center bg-slate-900/80">
+                        <div class="w-10 h-10 bg-cyan-600 rounded-full flex items-center justify-center text-white font-bold mx-auto mb-4">3</div>
+                        <h3 class="text-cyan-400 font-bold mb-2">Weaponization</h3>
+                        <p class="text-xs text-gray-400">Prepare tools (LOIC) and scripts.</p>
+                    </div>
+                    <!-- 4 -->
+                    <div class="glass-panel p-6 text-center bg-slate-900/80 border-red-500">
+                        <div class="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center text-white font-bold mx-auto mb-4 animate-pulse">4</div>
+                        <h3 class="text-red-400 font-bold mb-2">Execution</h3>
+                        <p class="text-xs text-gray-400">Launch flood of requests.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: ATTACK TYPES (Ping & SYN) -->
+        <div class="slide">
+            <h2 class="text-3xl title-font text-white mb-6">04. ATTACK TYPES (Part 1)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl w-full h-[70vh]">
+                
+                <!-- Ping Flood -->
+                <div class="glass-panel p-8 flex flex-col gap-3 overflow-y-auto">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-cyan-400">Ping Flood</h3>
+                        <span class="bg-cyan-900 text-cyan-200 text-xs px-2 py-1 rounded">ICMP</span>
+                    </div>
+                    <p class="text-sm text-gray-500 font-mono">Full Form: Internet Control Message Protocol</p>
+                    
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-green-500">
+                        <span class="text-green-400 text-xs font-bold block">NORMAL USE</span>
+                        <span class="text-gray-300 text-sm">Network diagnostics (Ping command).</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-red-500">
+                        <span class="text-red-400 text-xs font-bold block">MISUSE</span>
+                        <span class="text-gray-300 text-sm">Excessive ICMP requests overload server.</span>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-gray-700">
+                        <p class="text-sm text-gray-400 italic">"Analogy: Doorbell pressed thousands of times per second."</p>
+                        <p class="text-xs text-cyan-500 mt-2 font-bold">Defense: Rate limiting, Firewall rules.</p>
+                    </div>
+                </div>
+
+                <!-- SYN Flood -->
+                <div class="glass-panel p-8 flex flex-col gap-3 overflow-y-auto">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-purple-400">SYN Flood</h3>
+                        <span class="bg-purple-900 text-purple-200 text-xs px-2 py-1 rounded">TCP</span>
+                    </div>
+                    <p class="text-sm text-gray-500 font-mono">Full Form: Synchronize (TCP Handshake)</p>
+                    
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-green-500">
+                        <span class="text-green-400 text-xs font-bold block">NORMAL USE</span>
+                        <span class="text-gray-300 text-sm">Start TCP connection.</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-red-500">
+                        <span class="text-red-400 text-xs font-bold block">MISUSE</span>
+                        <span class="text-gray-300 text-sm">Many SYN requests, No ACK sent back → Half-open connections.</span>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-gray-700">
+                        <p class="text-sm text-gray-400 italic">"Analogy: Reserving seats in a restaurant but never showing up."</p>
+                        <p class="text-xs text-purple-500 mt-2 font-bold">Defense: SYN Cookies.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: ATTACK TYPES (HTTP & Amplification) -->
+        <div class="slide">
+            <h2 class="text-3xl title-font text-white mb-6">04. ATTACK TYPES (Part 2)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl w-full h-[70vh]">
+                
+                <!-- HTTP Flood -->
+                <div class="glass-panel p-8 flex flex-col gap-3 overflow-y-auto">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-red-400">HTTP Flood</h3>
+                        <span class="bg-red-900 text-red-200 text-xs px-2 py-1 rounded">Layer 7</span>
+                    </div>
+                    <p class="text-sm text-gray-500 font-mono">Full Form: HyperText Transfer Protocol</p>
+                    
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-green-500">
+                        <span class="text-green-400 text-xs font-bold block">NORMAL USE</span>
+                        <span class="text-gray-300 text-sm">Browser-Server communication (GET/POST).</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-red-500">
+                        <span class="text-red-400 text-xs font-bold block">MISUSE</span>
+                        <span class="text-gray-300 text-sm">Massive GET/POST requests overload server resources.</span>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-gray-700">
+                        <p class="text-sm text-gray-400 italic">"Analogy: Thousands of fake online food orders."</p>
+                        <p class="text-xs text-red-500 mt-2 font-bold">Defense: WAF, CAPTCHA.</p>
+                    </div>
+                </div>
+
+                <!-- Amplification -->
+                <div class="glass-panel p-8 flex flex-col gap-3 overflow-y-auto">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-2xl font-bold text-yellow-400">Amplification</h3>
+                        <span class="bg-yellow-900 text-yellow-200 text-xs px-2 py-1 rounded">DNS/NTP</span>
+                    </div>
+                    <p class="text-sm text-gray-500 font-mono">Full Form: Domain Name System / Network Time Protocol</p>
+                    
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-green-500">
+                        <span class="text-green-400 text-xs font-bold block">NORMAL USE</span>
+                        <span class="text-gray-300 text-sm">Resolving domains, Syncing clocks.</span>
+                    </div>
+                    <div class="bg-slate-900/50 p-3 rounded border-l-2 border-red-500">
+                        <span class="text-red-400 text-xs font-bold block">MISUSE</span>
+                        <span class="text-gray-300 text-sm">Small spoofed request → Huge response sent to victim.</span>
+                    </div>
+                    <div class="mt-auto pt-4 border-t border-gray-700">
+                        <p class="text-sm text-gray-400 italic">"Analogy: Shouting in a cave → Echo comes back 100x louder."</p>
+                        <p class="text-xs text-yellow-500 mt-2 font-bold">Defense: Anti-spoofing filters.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: SIMULATOR -->
+        <div class="slide">
+            <h2 class="text-4xl title-font text-white mb-4">05. SAFE SIMULATION</h2>
+            <div class="glass-panel w-full max-w-5xl h-[60vh] flex flex-col md:flex-row overflow-hidden border-slate-700 relative">
+                
+                <!-- Controls -->
+                <div class="w-full md:w-64 bg-slate-900 p-6 flex flex-col gap-4 border-r border-slate-700 z-20">
+                    <h3 class="text-gray-400 font-bold text-xs tracking-widest mb-4">ATTACK CONTROL</h3>
+                    <button onclick="setSimMode('ping')" class="p-3 rounded bg-slate-800 border border-slate-600 hover:border-cyan-500 text-left transition text-cyan-400 text-sm font-bold">PING FLOOD</button>
+                    <button onclick="setSimMode('http')" class="p-3 rounded bg-slate-800 border border-slate-600 hover:border-red-500 text-left transition text-red-400 text-sm font-bold">HTTP FLOOD</button>
+                    <div class="flex-1"></div>
+                    <button id="sim-btn" onclick="toggleSim()" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded shadow-lg transition">START</button>
+                </div>
+
+                <!-- Visuals -->
+                <div class="flex-1 bg-slate-900/90 relative flex items-center justify-between px-12 z-10">
+                    <!-- Botnet -->
+                    <div class="flex flex-col gap-2 items-center">
+                        <span class="text-[10px] text-gray-500">BOTNETS</span>
+                        <div class="grid grid-cols-2 gap-2">
+                            <i class="fas fa-desktop text-2xl text-gray-600 bot-icon"></i>
+                            <i class="fas fa-desktop text-2xl text-gray-600 bot-icon"></i>
+                            <i class="fas fa-desktop text-2xl text-gray-600 bot-icon"></i>
+                            <i class="fas fa-desktop text-2xl text-gray-600 bot-icon"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- Traffic Area -->
+                    <div class="flex-1 h-32 relative mx-8" id="sim-traffic"></div>
+
+                    <!-- Target -->
+                    <div class="flex flex-col items-center w-32">
+                        <span class="text-[10px] text-gray-500 mb-2">TARGET</span>
+                        <i class="fas fa-server text-5xl text-blue-500 transition duration-300" id="sim-server"></i>
+                        <div class="w-full h-2 bg-gray-700 mt-4 rounded-full overflow-hidden">
+                            <div id="sim-health" class="w-full h-full bg-green-500 transition-all duration-200"></div>
+                        </div>
+                        <span class="text-[10px] text-green-500 mt-1 font-mono" id="sim-status">HEALTHY</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: DEFENSE PART 1 -->
+        <div class="slide">
+            <h2 class="text-3xl title-font text-white mb-10">06. DEFENSE TECHNIQUES (Part 1)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-7xl w-full">
+                
+                <div class="glass-panel p-8 text-center border-t-4 border-blue-500">
+                    <i class="fas fa-shield-alt text-4xl text-blue-400 mb-4"></i>
+                    <h3 class="text-xl font-bold text-white">Firewall & IDS/IPS</h3>
+                    <p class="text-xs text-gray-400 mt-2">Intrusion Detection/Prevention System.</p>
+                    <p class="text-sm text-gray-300 mt-4"><strong>Role:</strong> Block suspicious packets.</p>
+                    <p class="text-xs text-blue-300 mt-2 italic">Analogy: Security guard at gate.</p>
+                </div>
+
+                <div class="glass-panel p-8 text-center border-t-4 border-purple-500">
+                    <i class="fas fa-tachometer-alt text-4xl text-purple-400 mb-4"></i>
+                    <h3 class="text-xl font-bold text-white">Rate Limiting</h3>
+                    <p class="text-xs text-gray-400 mt-2">Restrict requests per user.</p>
+                    <p class="text-sm text-gray-300 mt-4"><strong>Role:</strong> Prevent overload from single IP.</p>
+                    <p class="text-xs text-purple-300 mt-2 italic">Analogy: Limit shop entry frequency.</p>
+                </div>
+
+                <div class="glass-panel p-8 text-center border-t-4 border-yellow-500">
+                    <i class="fas fa-balance-scale text-4xl text-yellow-400 mb-4"></i>
+                    <h3 class="text-xl font-bold text-white">Load Balancing</h3>
+                    <p class="text-xs text-gray-400 mt-2">Distribute traffic.</p>
+                    <p class="text-sm text-gray-300 mt-4"><strong>Role:</strong> Avoid single server overload.</p>
+                    <p class="text-xs text-yellow-300 mt-2 italic">Analogy: Multiple bank counters.</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SLIDE 9: DEFENSE PART 2 -->
+        <div class="slide">
+            <h2 class="text-3xl title-font text-white mb-10">06. DEFENSE TECHNIQUES (Part 2)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl w-full">
+                
+                <div class="glass-panel p-10 flex flex-col items-center text-center border-l-4 border-green-500">
+                    <i class="fas fa-globe text-5xl text-green-400 mb-6"></i>
+                    <h3 class="text-2xl font-bold text-white">CDN</h3>
+                    <p class="text-sm text-gray-400 font-mono mb-4">Content Delivery Network</p>
+                    <p class="text-gray-300"><strong>Role:</strong> Distribute content globally. Absorb traffic at the edge.</p>
+                    <p class="text-sm text-green-300 mt-4 italic">Analogy: Multiple warehouses serving customers.</p>
+                </div>
+
+                <div class="glass-panel p-10 flex flex-col items-center text-center border-l-4 border-orange-500">
+                    <i class="fas fa-cloud-shield text-5xl text-orange-400 mb-6"></i>
+                    <h3 class="text-2xl font-bold text-white">Cloud DDoS Protection</h3>
+                    <p class="text-sm text-gray-400 font-mono mb-4">Cloudflare, Akamai, AWS Shield</p>
+                    <p class="text-gray-300"><strong>Role:</strong> Real-time filtering in the cloud. Scrub bad traffic.</p>
+                    <p class="text-sm text-orange-300 mt-4 italic">Analogy: Private security army.</p>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SLIDE 10: CONCLUSION -->
+        <div class="slide">
+            <div class="text-center max-w-4xl">
+                <h2 class="text-5xl title-font text-white mb-8">07. KEY TAKEAWAYS</h2>
+                <div class="glass-panel p-10 text-left">
+                    <ul class="space-y-6 text-lg text-gray-300">
+                        <li class="flex items-center gap-4">
+                            <i class="fas fa-check-circle text-blue-500 text-2xl"></i>
+                            <span>DoS/DDoS is both a <strong>Technical</strong> and <strong>Business</strong> risk.</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <i class="fas fa-check-circle text-purple-500 text-2xl"></i>
+                            <span>Prevention requires <strong>Layered Defenses</strong> (Firewall + CDN + Rate Limit).</span>
+                        </li>
+                        <li class="flex items-center gap-4">
+                            <i class="fas fa-check-circle text-green-500 text-2xl"></i>
+                            <span>Attackers exploit weaknesses, but <strong>Proactive Monitoring</strong> = Resilience.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="mt-12">
+                    <h3 class="title-font text-2xl text-blue-400">SESSION COMPLETE</h3>
+                    <p class="text-gray-500 mt-2 tracking-widest text-sm">CY HACKXIVIST</p>
+                    <button onclick="goToSlide(0)" class="mt-8 px-6 py-2 border border-gray-600 rounded hover:bg-white hover:text-black transition">RESTART</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="nav-controls">
+        <div class="nav-btn" onclick="changeSlide(-1)"><i class="fas fa-chevron-left"></i></div>
+        <div class="text-sm font-mono text-gray-400" id="slide-count">1/10</div>
+        <div class="nav-btn" onclick="changeSlide(1)"><i class="fas fa-chevron-right"></i></div>
+    </div>
+
+    <script>
+        // --- ANIMATED BACKGROUND ---
+        const canvas = document.getElementById('networkCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.size = Math.random() * 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if(this.x < 0 || this.x > width) this.vx *= -1;
+                if(this.y < 0 || this.y > height) this.vy *= -1;
+            }
+            draw() {
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                ctx.fill();
+            }
+        }
+        for(let i=0; i<80; i++) particles.push(new Particle());
+
+        function animateBg() {
+            ctx.clearRect(0,0,width,height);
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)';
+            ctx.lineWidth = 1;
+            for(let i=0; i<particles.length; i++){
+                particles[i].update();
+                particles[i].draw();
+                for(let j=i; j<particles.length; j++){
+                    let dx = particles[i].x - particles[j].x;
+                    let dy = particles[i].y - particles[j].y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if(dist < 150){
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animateBg);
+        }
+        animateBg();
+
+        // --- NAVIGATION LOGIC ---
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const progress = document.getElementById('progress');
+        const countDisplay = document.getElementById('slide-count');
+
+        function updateSlide() {
+            slides.forEach((s, i) => {
+                s.classList.remove('active');
+                if(i === currentSlide) s.classList.add('active');
+            });
+            progress.style.width = `${((currentSlide+1)/slides.length)*100}%`;
+            countDisplay.innerText = `${currentSlide+1}/${slides.length}`;
+        }
+
+        function changeSlide(dir) {
+            if(dir === 1 && currentSlide < slides.length-1) currentSlide++;
+            else if(dir === -1 && currentSlide > 0) currentSlide--;
+            updateSlide();
+        }
+
+        function goToSlide(idx) { currentSlide = idx; updateSlide(); }
+
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'ArrowRight') changeSlide(1);
+            if(e.key === 'ArrowLeft') changeSlide(-1);
+        });
+
+        // --- SIMULATOR LOGIC ---
+        let simMode = 'ping';
+        let simRunning = false;
+        let simInterval;
+        let health = 100;
+
+        function setSimMode(m) { if(!simRunning) simMode = m; }
+
+        function toggleSim() {
+            const btn = document.getElementById('sim-btn');
+            if(simRunning) {
+                // Stop
+                clearInterval(simInterval);
+                simRunning = false;
+                btn.innerText = "START";
+                btn.classList.replace('bg-red-600', 'bg-green-600');
+                btn.classList.replace('hover:bg-red-500', 'hover:bg-green-500');
+                resetSim();
+            } else {
+                // Start
+                simRunning = true;
+                btn.innerText = "STOP";
+                btn.classList.replace('bg-green-600', 'bg-red-600');
+                btn.classList.replace('hover:bg-green-500', 'hover:bg-red-500');
+                
+                // Bots Active
+                document.querySelectorAll('.bot-icon').forEach(b => b.classList.add('text-red-500', 'animate-pulse'));
+                
+                simInterval = setInterval(() => {
+                    spawnPacket();
+                    damage();
+                }, simMode === 'http' ? 150 : 300);
+            }
+        }
+
+        function spawnPacket() {
+            const zone = document.getElementById('sim-traffic');
+            const p = document.createElement('div');
+            p.className = 'absolute w-3 h-3 rounded-full';
+            p.style.backgroundColor = simMode === 'http' ? '#f87171' : '#22d3ee';
+            p.style.top = Math.random() * 80 + 10 + '%';
+            p.style.left = '0';
+            p.style.transition = 'left 1s linear';
+            zone.appendChild(p);
+            
+            setTimeout(() => { p.style.left = '95%'; }, 50);
+            setTimeout(() => { p.remove(); }, 1050);
+        }
+
+        function damage() {
+            if(health > 0) health -= (simMode === 'http' ? 5 : 2);
+            updateVis();
+        }
+
+        function resetSim() {
+            document.querySelectorAll('.bot-icon').forEach(b => b.classList.remove('text-red-500', 'animate-pulse'));
+            const heal = setInterval(() => {
+                if(health < 100) { health += 5; updateVis(); }
+                else clearInterval(heal);
+            }, 100);
+        }
+
+        function updateVis() {
+            const bar = document.getElementById('sim-health');
+            const server = document.getElementById('sim-server');
+            const status = document.getElementById('sim-status');
+
+            bar.style.width = health + '%';
+            
+            if(health > 50) {
+                bar.classList.replace('bg-red-500', 'bg-green-500');
+                server.className = "fas fa-server text-5xl text-blue-500 transition duration-300";
+                status.innerText = "HEALTHY";
+                status.className = "text-[10px] text-green-500 mt-1 font-mono";
+            } else if (health > 0) {
+                bar.classList.replace('bg-green-500', 'bg-red-500');
+                server.className = "fas fa-server text-5xl text-red-500 animate-pulse transition duration-300";
+                status.innerText = "CRITICAL";
+                status.className = "text-[10px] text-red-500 mt-1 font-mono";
+            } else {
+                health = 0;
+                server.className = "fas fa-server text-5xl text-gray-600 animate-bounce transition duration-300";
+                status.innerText = "OFFLINE";
+            }
+        }
+
+    </script>
+</body>
+</html>
